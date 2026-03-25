@@ -26,7 +26,8 @@ is driven by automated tests generated from those specifications.
 - **Never implement features not in the specs** (specs/frd-*.md)
 - **Never modify tests** without human approval — tests are the contract
 - **Always check Gherkin scenarios** before implementing a feature
-- **Always run tests** after making changes
+- **Never skip tests** — no `test.skip()`, no `xit()`, no `@pending`, no commenting out. Tests are proof that specs are met.
+- **Always run tests** after making changes — the FULL suite, not just "relevant" tests
 - If a spec seems wrong, flag it — do not silently deviate
 
 ## File Organization
@@ -141,6 +142,21 @@ specs/
 - Every bug fix MUST: link to an FRD, create a failing test, fix minimally, verify regression
 - Commit format: `[bugfix] {frd-id}: {description}`
 - Tracked as micro-increments in state.json
+
+
+## Test Discipline Gospel
+Tests are the **proof** that specifications have been implemented correctly. They are not optional, not skippable, and not negotiable.
+
+Key rules:
+- **Tests = proof of spec completion.** A feature without passing tests is not done.
+- **Phase order is sacred.** Tests → Contracts → Implementation → Verify. Never skip or reorder.
+- **All tests must pass before advancing.** No deployment, no commit to main while any test fails.
+- **Regression is mandatory.** After every change, run ALL tests — not just new ones.
+
+### When the User Spots a Problem
+At any point during the flow, if the user identifies something wrong:
+1. **Pause** current work
+2. **Offer** to generate a test that captures the problem
 
 ## Shell-Specific Extensions
 <!-- Shells should add stack-specific instructions below this line -->

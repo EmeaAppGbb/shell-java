@@ -171,11 +171,13 @@ Resolve every technology, library, service. Research via MCP tools. Search skill
                                                                    main green + deployed
 ```
 
+> **⚠ MANDATORY:** Every step must execute in order. No step may be skipped, reordered, or compressed. Tests from Step 1 are the proof that specs are met — they are the contract.
+
 #### Step 1: Test Scaffolding
 - **1a** `e2e-generation` — Playwright specs + POMs from flow walkthrough
-- **1b** `gherkin-generation` — Feature files from FRDs (**human gate** after this)
-- **1c** `test-generation` — Cucumber steps + Vitest from Gherkin
-- **1d** Red baseline: new tests fail, existing tests still pass
+- **1b** `gherkin-generation` — Feature files from FRDs (**human gate** after this — user approves scenarios)
+- **1c** `test-generation` — Cucumber steps + Vitest from Gherkin (**human gate** — user approves test code)
+- **1d** Red baseline: new tests fail, existing tests still pass. Zero `test.skip()` allowed.
 **Commit:** `[increment] {id}/tests — test scaffolding complete`
 
 #### Step 2: Contracts → `contract-generation` skill

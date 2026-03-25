@@ -1,51 +1,151 @@
 # Quick Start
 
-Get spec2cloud running in your project in under 5 minutes.
+Get the spec2cloud Java shell running in under 5 minutes.
 
 ## Prerequisites
 
-- GitHub Copilot (Chat enabled) or Claude Code
-- VS Code with Copilot extension
-- Azure CLI + Azure Developer CLI (azd)
-- Node.js 20+ or .NET 8+
+### Option A: Use Codespaces / DevContainer (Recommended)
 
-## Option 1: npx (Recommended)
+All spec2cloud shells include a fully configured **DevContainer** / **GitHub Codespaces** setup. Everything is pre- the only thing you need locally is:installed 
+
+- **Docker Desktop** (or any Docker-compatible  [docker.com](https://www.docker.com/products/docker-desktop/)runtime) 
+- **VS Code** with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+Then simply open the repo in VS Code and click "Reopen in Container", or launch a GitHub Codespace from the repo page. All prerequisites below are handled automatically.
+
+### Option B: Local Setup
+
+If you prefer running locally without containers, install the following:
+
+#### Core Tools (all shells need these)
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| **GitHub Copilot** | AI orchestrator | [github.com/features/copilot](https://github.com/features/copilot) |
+| **VS Code** | Editor with Copilot extension | [code.visualstudio.com](https://code.visualstudio.com/) |
+| **Azure CLI** | Azure resource management | [aka.ms/installcli](https://aka.ms/installcli) |
+| **Azure Developer CLI (azd)** | Deploy to Azure | [Install azd](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) |
+| **.NET SDK (latest)** | Required for Aspire orchestration | [dot.net](https://dot.net/download) |
+| **.NET Aspire** | Local service orchestration | `curl -sSL https://aspire.dev/install.sh \| bash` |
+| **Docker** | Container builds & deployment | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| **Git** | Source control | [git-scm.com](https://git-scm.com/) |
+
+#### Language-Specific (Java)
+
+- **Java 17+ ( [adoptium.net](https://adoptium.net/) or [sdkman.io](https://sdkman.io/)JDK)** 
+- **Maven 3. [maven.apache.org](https://maven.apache.org/)9+** 
+- **Node.js 20+** and ** [nodejs.org](https://nodejs.org/) (for Next.js frontend)npm** 
+
+#### Optional (Recommended)
+
+- ** `npx playwright install` (for E2E tests)Playwright** 
+- ** `pip install mkdocs mkdocs-material` (for documentation site)MkDocs** 
+
+### Install Scripts
+
+<details>
+<summary><strong>macOS (Homebrew)</strong></summary>
 
 ```bash
-npx spec2cloud init
+# Core tools
+brew install azure-cli
+brew install azd
+brew install --cask docker
+brew install dotnet
+curl -sSL https://aspire.dev/install.sh | bash
+
+# Language-specific
+brew install openjdk@17
+brew install maven
+brew install node@20
+
+# Optional
+npx playwright install-deps && npx playwright install
+pip install mkdocs mkdocs-material
 ```
 
-## Option 2: One-Line Install
+</details>
+
+<details>
+<summary><strong>Linux (Ubuntu/Debian)</strong></summary>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EmeaAppGbb/spec2cloud/vNext/scripts/quick-install.sh | bash
+# Core tools
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+curl -fsSL https://aka.ms/install-azd.sh | bash
+wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && chmod +x dotnet-install.sh && ./dotnet-install.sh
+curl -sSL https://aspire.dev/install.sh | bash
+
+# Language-specific
+sudo apt-get install -y openjdk-17-jdk maven
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Optional
+npx playwright install-deps && npx playwright install
+pip install mkdocs mkdocs-material
 ```
 
-## Option 3: Shell Template (Recommended for New Projects)
+</details>
 
-Use a pre-configured shell:
+<details>
+<summary><strong>Windows (winget / PowerShell)</strong></summary>
 
-- **Next.js + TypeScript**: `spec2cloud-shell-nextjs-typescript`
-- **.NET**: `shell-dotnet`
-- **Agentic .NET**: `agentic-shell-dotnet`
-- **Agentic Python**: `agentic-shell-python`
+```powershell
+# Core tools
+winget install Microsoft.AzureCLI
+winget install Microsoft.Azd
+winget install Microsoft.DotNet.SDK.Preview
+winget install Docker.DockerDesktop
+dotnet workload install aspire
 
-## Option 4: Add to Existing Project
+# Language-specific
+winget install EclipseAdoptium.Temurin.17.JDK
+winget install Apache.Maven
+winget install OpenJS.NodeJS.LTS
+
+# Optional
+npx playwright install
+pip install mkdocs mkdocs-material
+```
+
+</details>
+
+### Verify Installation
 
 ```bash
-npx spec2cloud init --minimal
+# Core
+az --version && azd version && dotnet --version && aspire --version && docker --version
+
+# Language
+java --version   # 17+
+mvn --version    # 3.9+
+node --version   # v20+
 ```
 
-## Your First Workflow
+---
 
-1. Open your project in VS Code with GitHub Copilot
-2. Start a conversation with Copilot — the orchestrator (AGENTS.md) activates automatically
-3. Describe your app idea or ask Copilot to analyze your existing codebase
-4. At each human gate, review and approve
-5. Watch as tests, contracts, implementation, and deployment happen automatically
+## Getting Started
+
+### 1. Clone and Run
+
+```bash
+git clone https://github.com/EmeaAppGbb/shell-java.git
+cd shell-java
+dotnet run --project apphost.cs    # Aspire starts all services
+```
+
+### 2. Open in VS Code with Copilot
+
+The orchestrator (AGENTS.md) activates automatically when you start a Copilot conversation.
+
+### 3. Start Building
+
+ deploy
+- **Brownfield:** Ask Copilot to analyze the existing  it extracts specs, then you choose pathscodebase 
 
 ## What Happens Next
 
-**Greenfield:** Phase 1 Discovery (spec → UI → plan → tech stack) → Phase 2 Delivery (tests → contracts → code → deploy) × N increments
+ deploy)  N increments
 
-**Brownfield:** Phase B1 Extract → Phase B2 Spec-Enable → Testability Gate (can you test it?) → Track A (green baseline tests) or Track B (behavioral docs) → Choose paths → Assess → Plan → Phase 2 Delivery
+ Phase 2 Delivery
