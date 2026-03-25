@@ -1,0 +1,14 @@
+.git
+.github
+.devcontainer
+.vscode
+.azure
+node_modules
+target
+.mvn
+.next
+docs
+specs
+e2e
+tests
+*.md

@@ -1,0 +1,21 @@
+{
+  "name": "shell-java",
+  "version": "1.0.0",
+  "private": true,
+  "description": "spec2cloud shell — Spring Boot + Next.js + Azure",
+  "scripts": {
+    "dev": "dotnet run --project apphost.cs",
+    "dev:api": "cd src/api && mvn spring-boot:run",
+    "dev:web": "cd src/web && npm run dev",
+    "build:api": "cd src/api && mvn package -DskipTests",
+    "build:web": "cd src/web && npm run build",
+    "build:all": "npm run build:api && npm run build:web",
+    "test:api": "cd src/api && mvn test",
+    "test:web": "cd src/web && npm run lint",
+    "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
+    "test:bdd": "cd src/api && mvn test -Dcucumber",
+    "test:all": "npm run test:api && npm run test:web && npm run test:e2e",
+    "docs:serve": "cd specs && mkdocs serve",
+    "docs:build": "cd specs && mkdocs build"
+  }
+}
