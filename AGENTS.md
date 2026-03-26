@@ -559,9 +559,15 @@ infra/                # Azure Bicep templates
 
 | Service | Command | URL |
 |---|---|---|
-| **Aspire (all services)** | `dotnet run --project apphost.cs` | API + Web + Docs via Aspire Dashboard |
+| **Aspire (all services)** | `aspire start` | API + Web + Docs via Aspire Dashboard |
+| Wait for healthy | `aspire wait api --status healthy` | Blocks until API is ready |
+| Describe resources | `aspire describe` | Show resource status, health, endpoints |
+| View logs | `aspire logs <resource>` | Stream console logs for a resource |
+| Stop Aspire | `aspire stop` | Clean shutdown of all resources |
 | Backend (standalone) | `cd src/api && mvn spring-boot:run` | http://localhost:8080 |
 | Frontend (standalone) | `cd src/web && npm run dev` | http://localhost:3000 |
+
+> **Always use `aspire start`** (background, non-blocking) — never `aspire run` (interactive, blocking). Use `aspire wait <resource> --status healthy` to block until a resource is ready. Use `aspire describe` to inspect resource status.
 
 > **Prefer Aspire** for all integration and e2e testing.
 
