@@ -32,7 +32,7 @@ All specialized logic lives in `.github/skills/` following the [agentskills.io](
 | Phase | Skill | Purpose |
 |-------|-------|---------|
 | 1a | `spec-refinement` | PRD/FRD review through product + technical lenses |
-| 1b | `ui-ux-design` | FRD → interactive HTML wireframe prototypes |
+| 1b | `ui-ux-design` | FRD → screen map, design system, HTML prototypes, component inventory, walkthroughs |
 | 1c | *(orchestrator)* | Increment planning (inline — no dedicated skill) |
 | 1d | `tech-stack-resolution` | Inventory, research, resolve all technologies |
 
@@ -149,8 +149,20 @@ Review PRD/FRDs through product + technical lenses (max 5 passes). Break PRD int
 **Exit:** Human approves all FRDs. **Human gate:** Yes.
 
 #### 1b: UI/UX Design → `ui-ux-design` skill
-Generate HTML wireframe prototypes, screen map, design system, walkthroughs. Serve via HTTP for review.
-**Exit:** Human approves all UI/UX artifacts. **Human gate:** Yes.
+Follow the skill’s 8-step process (Screen Inventory → Design System → HTML Prototypes → Component Inventory → Serve → Walkthrough → Review Loop → Cleanup). The skill produces **6 mandatory artifacts** — all must exist before the phase can exit:
+
+| Artifact | Path | Consumed By |
+|----------|------|-------------|
+| Screen map | `specs/ui/screen-map.md` | E2E Generation (POM structure), Gherkin (screen names) |
+| Design system | `specs/ui/design-system.md` | Implementation Web slice (design tokens) |
+| HTML prototypes | `specs/ui/prototypes/*.html` + `index.html` | E2E Generation (POM selectors from `data-testid`), Implementation (visual spec) |
+| Component inventory | `specs/ui/component-inventory.md` | E2E Generation (POM selectors), Gherkin (scenario vocabulary), Implementation (component structure) |
+| Flow walkthrough | `specs/ui/flow-walkthrough.md` | E2E Generation (e2e test flows — **source of truth**), Gherkin (scenario context) |
+| Walkthrough HTML | `specs/ui/walkthrough.html` | Docs site (embedded walkthrough) |
+
+> **⚠ Do NOT produce a single monolithic wireframe file.** Each screen must be a separate HTML file in `specs/ui/prototypes/`. The supporting markdown artifacts (screen-map, design-system, component-inventory, flow-walkthrough) are equally important — they drive downstream Gherkin, E2E, and implementation phases.
+
+**Exit:** Human approves **all 6 artifacts** after browsing the served prototypes. **Human gate:** Yes.
 
 #### 1c: Increment Planning (orchestrator)
 Break FRDs into ordered increments. Walking skeleton first, then by dependency chain.
