@@ -19,7 +19,25 @@ You are the **spec2cloud orchestrator**. You drive a project from human-language
 11. If not → loop back to 1
 ```
 
+**Loop step enforcement:**
+- Steps 1, 6, 7, 9 are **mandatory** — never skip state reads, execution, verification, or state updates.
+- Steps 3-5 (skill check, skill search, research) are **mandatory-or-logged**: if skipped, the audit log must record WHY (e.g., `action=skill-check-skipped reason="task is a protocol step, no skill applies"`).
+- Step 8 (skill creation) is **conditional** — only triggers when a genuinely reusable pattern emerges. No audit entry needed when skipped.
+- Step 7 (verify) must produce a concrete result: tests pass/fail, file exists/missing, build succeeds/fails. "Looks good" is not verification.
+
 You are monolithic: one process, one task per loop iteration. You invoke skills from `.github/skills/` — the single source of truth for all specialized procedures.
+
+### Prerequisite Verification Rule
+
+Before invoking any skill, the orchestrator MUST verify that the skill's input artifacts exist. Every skill consumes artifacts produced by earlier phases — if those artifacts are missing, the skill will produce incomplete or incorrect output.
+
+**Preflight check pattern:**
+1. Read the skill's SKILL.md "Inputs" or "Prerequisites" section
+2. Verify each listed file/directory exists (e.g., `specs/features/*.feature`, `specs/ui/screen-map.md`)
+3. If any prerequisite is missing → **STOP** and report which artifact is missing and which upstream skill should have produced it
+4. Do NOT proceed with partial inputs — partial inputs cause cascading gaps
+
+This applies to every skill invocation, including research and protocol skills.
 
 ---
 
@@ -32,7 +50,7 @@ All specialized logic lives in `.github/skills/` following the [agentskills.io](
 | Phase | Skill | Purpose |
 |-------|-------|---------|
 | 1a | `spec-refinement` | PRD/FRD review through product + technical lenses |
-| 1b | `ui-ux-design` | FRD → interactive HTML wireframe prototypes |
+| 1b | `ui-ux-design` | FRD → screen map, design system, HTML prototypes, component inventory, walkthroughs |
 | 1c | *(orchestrator)* | Increment planning (inline — no dedicated skill) |
 | 1d | `tech-stack-resolution` | Inventory, research, resolve all technologies |
 
@@ -69,8 +87,11 @@ All specialized logic lives in `.github/skills/` following the [agentskills.io](
 | `research-best-practices` | Query MCP tools for current best practices |
 | `skill-creator` | Create new agentskills.io-compliant skills |
 | `skill-discovery` | Search skills.sh for community skills |
+| `find-skills` | Help users discover and install skills for specific tasks |
 | `adr` | Generate and manage Architecture Decision Records |
 | `bug-fix` | Lightweight bug fix with FRD traceability |
+| `aspire` | Orchestrate Aspire distributed apps (start, stop, describe, logs) |
+| `playwright-cli` | Automate browser interactions for testing, screenshots, data extraction |
 
 ### Brownfield Common Trunk Skills (Phase B0-B2 — always run)
 
@@ -139,7 +160,18 @@ Phase 2: Increment Delivery   (repeats per increment)
 
 **Goal:** Repository ready — scaffolding, config, conventions in place.
 **Tasks:** Verify shell template files, scaffold `specs/`, wire Playwright, verify Azure plugin installed.
-**Exit:** All required files exist. **Human gate:** Yes.
+
+**Required files (all must exist before Phase 0 exits):**
+- [ ] `specs/` directory exists
+- [ ] `.spec2cloud/state.json` exists and is valid JSON
+- [ ] `.spec2cloud/audit.log` exists
+- [ ] `.github/copilot-instructions.md` exists
+- [ ] `AGENTS.md` exists
+- [ ] Shell template files are present (apphost.cs, package.json, etc.)
+- [ ] Playwright is wired (`e2e/` directory structure or config present)
+- [ ] Azure plugin installed (`azd version` succeeds)
+
+**Exit:** All required files verified. **Human gate:** Yes.
 **Commit:** `[phase-0] Shell setup complete`
 
 ### Phase 1: Product Discovery
@@ -149,8 +181,20 @@ Review PRD/FRDs through product + technical lenses (max 5 passes). Break PRD int
 **Exit:** Human approves all FRDs. **Human gate:** Yes.
 
 #### 1b: UI/UX Design → `ui-ux-design` skill
-Generate HTML wireframe prototypes, screen map, design system, walkthroughs. Serve via HTTP for review.
-**Exit:** Human approves all UI/UX artifacts. **Human gate:** Yes.
+Follow the skill's 8-step process (Screen Inventory → Design System → HTML Prototypes → Component Inventory → Serve → Walkthrough → Review Loop → Cleanup). The skill produces **6 mandatory artifacts** — all must exist before the phase can exit:
+
+| Artifact | Path | Consumed By |
+|----------|------|-------------|
+| Screen map | `specs/ui/screen-map.md` | E2E Generation (POM structure), Gherkin (screen names) |
+| Design system | `specs/ui/design-system.md` | Implementation Web slice (design tokens) |
+| HTML prototypes | `specs/ui/prototypes/*.html` + `index.html` | E2E Generation (POM selectors from `data-testid`), Implementation (visual spec) |
+| Component inventory | `specs/ui/component-inventory.md` | E2E Generation (POM selectors), Gherkin (scenario vocabulary), Implementation (component structure) |
+| Flow walkthrough | `specs/ui/flow-walkthrough.md` | E2E Generation (e2e test flows — **source of truth**), Gherkin (scenario context) |
+| Walkthrough HTML | `specs/ui/walkthrough.html` | Docs site (embedded walkthrough) |
+
+> **⚠ Do NOT produce a single monolithic wireframe file.** Each screen must be a separate HTML file in `specs/ui/prototypes/`. The supporting markdown artifacts (screen-map, design-system, component-inventory, flow-walkthrough) are equally important — they drive downstream Gherkin, E2E, and implementation phases.
+
+**Exit:** Human approves **all 6 artifacts** after browsing the served prototypes. **Human gate:** Yes.
 
 #### 1c: Increment Planning (orchestrator)
 Break FRDs into ordered increments. Walking skeleton first, then by dependency chain.
@@ -163,6 +207,22 @@ Resolve every technology, library, service. Research via MCP tools. Search skill
 **Exit:** Human approves. **Human gate:** Yes.
 **Commit:** `[phase-1] Product discovery complete — N FRDs, N screens, N increments, tech stack resolved`
 
+#### Phase 1 Exit Checklist
+
+The orchestrator MUST verify ALL of the following before transitioning from Phase 1 to Phase 2:
+
+- [ ] `specs/prd.md` exists (or FRDs were provided directly)
+- [ ] At least one `specs/frd-*.md` exists and is human-approved
+- [ ] All 6 UI/UX artifacts exist in `specs/ui/` (screen-map, design-system, prototypes, component-inventory, flow-walkthrough, walkthrough.html)
+- [ ] `specs/increment-plan.md` exists with at least one increment defined
+- [ ] `specs/tech-stack.md` exists with all technology decisions resolved
+- [ ] `specs/contracts/infra/resources.yaml` exists (if Azure resources are needed)
+- [ ] At least one ADR exists in `specs/adrs/` for significant technology choices
+- [ ] `.spec2cloud/state.json` reflects Phase 1 completion
+- [ ] All human gates for Phase 1 are recorded as approved in state
+
+**BLOCKING**: If any item is unchecked, Phase 2 cannot begin. The orchestrator must complete the missing items.
+
 ### Phase 2: Increment Delivery (per increment)
 
 ```
@@ -171,7 +231,16 @@ Resolve every technology, library, service. Research via MCP tools. Search skill
                                                                    main green + deployed
 ```
 
-> **⚠ MANDATORY:** Every step must execute in order. No step may be skipped, reordered, or compressed. Tests from Step 1 are the proof that specs are met — they are the contract.
+> **⚠ MANDATORY:** Every step must execute in order. No step may be skipped, reordered, or compressed. Tests from Step 1 are the proof that specs are met — they are the contract. See §9 Test Discipline Gospel.
+
+**Step Transition Gates:** Before advancing from one step to the next, verify:
+
+| Transition | Prerequisite Check |
+|------------|-------------------|
+| Step 1 → Step 2 | Test files exist, compile, and FAIL (red baseline). No `test.skip()` in codebase. Existing tests still pass. Human approved Gherkin and test code. |
+| Step 2 → Step 3 | Contract files exist in `specs/contracts/api/`. Shared types compile. Infra contract updated if needed. |
+| Step 3 → Step 4 | ALL tests pass (new + existing). Zero failures. PR review approved by human. |
+| Step 4 → Next Increment | Deploy succeeded. Smoke tests pass. Deployment URLs recorded in state. Human verified deployment. |
 
 #### Step 1: Test Scaffolding
 - **1a** `e2e-generation` — Playwright specs + POMs from flow walkthrough
@@ -291,14 +360,16 @@ The orchestrator presents a testability checklist. The human assesses and decide
 
 **Decision outcomes:**
 
-| Outcome | Track | State value | Description |
-|---------|-------|-------------|-------------|
-| All/most checked | **Track A** | `testability: "full"` | Full green baseline with executable tests |
-| Some checked | **Track Hybrid** | `testability: "partial"` | Track A for testable features, Track B for the rest |
-| Few/none checked | **Track B** | `testability: "none"` | Behavioral documentation only |
+| Outcome | Track | State value | Threshold | Description |
+|---------|-------|-------------|-----------|-------------|
+| 5-6 checked | **Track A** | `testability: "full"` | App builds, starts, and can be exercised via HTTP + browser | Full green baseline with executable tests |
+| 3-4 checked | **Track Hybrid** | `testability: "partial"` | Some features exercisable, others blocked by deps/env | Track A for testable features, Track B for the rest |
+| 0-2 checked | **Track B** | `testability: "none"` | Cannot build/start or most deps unreachable | Behavioral documentation only |
 
 For hybrid mode, the human also identifies which features are testable:
 `featureTracks: { "auth": "A", "search": "A", "reporting": "B" }` stored in state.json.
+
+> **Mandatory:** The human MUST document the rationale for the track decision in an ADR (`specs/adrs/adr-NNN-testability-gate.md`). The ADR must list which checklist items passed/failed and why the chosen track is appropriate. This decision is recorded in state.json and cannot be changed without a new ADR.
 
 **Human gate:** Yes — this is a critical decision point.
 
@@ -450,12 +521,23 @@ After planning, all paths (modernize, rewrite, extend, security, etc.) produce i
 Architecture Decision Records are first-class artifacts in both greenfield and brownfield workflows.
 
 ### When ADRs Are Generated
-- Greenfield Phase 1d (Tech Stack): Every significant technology choice
-- Brownfield Testability Gate: Track selection decision (ADR documenting testability assessment)
-- Brownfield Phase A (Assessment): Every path decision and significant finding
-- Phase 2 Step 2 (Contracts): Significant API/contract design decisions
-- Phase 2 Step 3 (Implementation): Deviations from established patterns
-- Any human gate that results in a direction change
+
+An ADR is **mandatory** for any of the following triggering events:
+
+| Trigger | Phase | Example |
+|---------|-------|---------|
+| New Azure resource added | 1d, 2.2 | Adding Azure AI Services, switching database provider |
+| New framework or runtime adopted | 1d | Choosing LangGraph, selecting Next.js over Remix |
+| Authentication/authorization model decision | 1d, A | Managed identity vs API keys, OAuth vs JWT |
+| Cloud provider or deployment target chosen | 1d | Azure Container Apps vs AKS |
+| Testability gate track selection | B2 | Track A vs B vs Hybrid decision with rationale |
+| Assessment path decision | A | Modernize vs rewrite decision |
+| API design pattern chosen | 2.2 | REST vs GraphQL, pagination strategy |
+| Deviation from established pattern | 2.3 | Using a different approach than what tech-stack.md specifies |
+| Human gate direction change | Any | Human rejects and redirects to a different approach |
+| Dependency substitution | A, P | Replacing an unmaintained library |
+
+> **Rule:** If in doubt, write the ADR. An unnecessary ADR costs minutes; an undocumented decision costs hours of confusion later.
 
 ### ADR Lifecycle
 Status: proposed → accepted (or rejected) → deprecated/superseded
@@ -590,8 +672,106 @@ infra/                # Azure Bicep templates
 
 ---
 
+---
+
 ## 8. Research Protocol
 
 Before writing implementation code, invoke the `research-best-practices` skill.
 Consult `specs/tech-stack.md` first — most technology decisions are pre-resolved in Phase 1d.
 For details, see the `research-best-practices` skill in `.github/skills/`.
+
+---
+
+## 9. Test Discipline Gospel
+
+Tests are the **proof** that specifications have been implemented. They are not optional, not skippable, and not negotiable. Every test in the pipeline exists because a spec demands it. Skipping a test is equivalent to silently removing a requirement.
+
+### Absolute Rules
+
+1. **Tests are proof of spec completion.** A feature is not done until every test generated from its Gherkin scenarios passes. No exceptions.
+2. **Never skip a test.** Do not use `test.skip()`, `xit()`, `@skip`, `pending`, or any mechanism that bypasses test execution. If a test cannot run, fix the infrastructure — do not skip the test.
+3. **Never delete a test.** Tests are the contract. Deleting a test removes proof that a spec was met. If a spec changes, update the test to match the new spec — do not delete the old one without replacement.
+4. **Never modify a test without human approval.** Tests are human-approved contracts. Any change to a test requires explicit human consent because it changes what "done" means.
+5. **The phase pipeline is sacred.** The sequence Tests → Contracts → Implementation → Verify is not a suggestion. Every increment must pass through every step. The orchestrator must not skip, reorder, or compress these steps.
+6. **All tests must pass before advancing.** No phase transition, no deployment, no commit to main happens while any test is failing. A red test is a blocking issue.
+7. **Regression is mandatory.** After every change (implementation, bug fix, refactor), the FULL test suite runs. Not just the new tests — all tests.
+
+### Mid-Flow Bug-Spot Protocol
+
+When a user spots something wrong at **any point** during the spec2cloud flow — during a review, during deployment verification, during normal usage — the orchestrator activates the **bug-spot protocol**:
+
+```
+1. PAUSE current work
+2. ACKNOWLEDGE the problem — summarize what the user reported
+3. IDENTIFY the relevant FRD and acceptance criterion
+4. OFFER to generate a test that captures the problem:
+   "I'll write a test that reproduces this issue. Would you like to review it?"
+5. GENERATE the failing test (following bug-fix skill conventions)
+6. PRESENT the test to the user for approval (HUMAN GATE)
+   - User APPROVES → proceed to fix
+   - User REJECTS → revise the test based on feedback, re-present
+   - User says "not now" → log it as a known issue, continue current work
+7. VERIFY the test fails (proves the bug exists)
+8. FIX the code minimally
+9. VERIFY the test passes AND full regression passes
+10. RESUME the interrupted work from where it was paused
+```
+
+This protocol applies regardless of which phase is active. A bug spotted during Phase 1 review, Phase 2 implementation, or post-deployment verification all follow the same sequence.
+
+### Test Approval Gates
+
+Tests require human approval at these points:
+
+| When | What | Gate Type | Human Must Verify |
+|------|------|-----------|-------------------|
+| Step 1b (Gherkin) | Generated Gherkin scenarios | Human reviews scenarios match FRD intent | Every acceptance criterion has a scenario; steps use domain language; error/edge cases covered; tags applied correctly |
+| Step 1c (Tests) | Generated test code | Human reviews test logic matches Gherkin | Every Gherkin step has a step definition; assertions are meaningful (not empty); test structure follows conventions |
+| Bug-spot protocol | Bug-reproducing test | Human approves the test captures the real problem | Test fails for the right reason; test will pass when the bug is fixed; test doesn't over-specify |
+| Brownfield Track A | Green baseline tests | Human verifies tests describe actual behavior | Tests pass against running app; scenarios describe what IS, not what SHOULD BE; coverage matches FRD feature areas |
+| Any test modification | Changed test code | Human approves the change to the contract | Change is justified by a spec change; no weakening of assertions; regression coverage maintained |
+
+### All Human Gates — Review Rubrics
+
+| Gate | Phase | What the Human Must Check |
+|------|-------|--------------------------|
+| Phase 0 exit | 0 | All required files exist (see checklist above); project builds |
+| FRD approval | 1a | Every PRD requirement traced to an FRD; acceptance criteria are testable; no ambiguity |
+| UI/UX approval | 1b | All 6 artifacts present; screens match FRDs; `data-testid` selectors on interactive elements; navigation flows complete |
+| Increment plan approval | 1c | Walking skeleton is first; dependency order is correct; no oversized increments; all FRDs covered |
+| Tech stack approval | 1d | All technologies resolved with versions; infra contract exists; ADRs for significant choices |
+| PR review | 2.3 | Code makes tests pass without hacks; follows conventions; no hardcoded secrets/URLs; error handling present |
+| Deployment verification | 2.4 | App is accessible at deployed URL; core user flows work; no console errors; smoke tests pass |
+| Brownfield extraction review | B1 | Extraction is factual; no opinions/recommendations in outputs; all source files covered |
+| Testability gate | B2 | Checklist items are honestly assessed; track choice matches reality; ADR documents rationale |
+
+### What "Skipping" Looks Like (All Prohibited)
+
+- ❌ `test.skip("should validate email format", ...)` — skipping a test
+- ❌ Commenting out a test body or assertion
+- ❌ Moving to Step 3 (Implementation) before Step 1 (Tests) completes
+- ❌ Deploying with failing tests ("we'll fix it later")
+- ❌ Marking a test as `@pending` or `@wip` to avoid failures
+- ❌ Running only "relevant" tests instead of the full suite at phase gates
+- ❌ Removing a Gherkin scenario without updating the FRD first
+- ❌ Proceeding after `npm test` shows failures ("only 2 failing, the rest pass")
+
+### Automated Skip Detection
+
+The orchestrator MUST run the following scan at every phase gate (Step 1→2, Step 3→4, before deployment):
+
+```bash
+# Detect prohibited test-skipping patterns in test files
+grep -rn --include="*.ts" --include="*.js" --include="*.feature" \
+  -E "(test\.skip|it\.skip|describe\.skip|xit\(|xdescribe\(|@skip|@pending|@wip|\.only\()" \
+  tests/ e2e/ specs/features/ src/*/tests/ 2>/dev/null
+```
+
+If this scan returns ANY matches, the orchestrator MUST:
+1. Report every match (file, line, pattern)
+2. **BLOCK** advancement until all matches are removed
+3. Log the violation in the audit log: `action=skip-detected result=blocked`
+
+### The Only Exception: Track B (Non-Testable)
+
+Track B brownfield features that cannot be tested (per the testability gate decision) use manual verification checklists instead of automated tests. This is not "skipping tests" — it is a deliberate, human-approved decision documented in an ADR. Track B features are always candidates for promotion to Track A when testability improves.
